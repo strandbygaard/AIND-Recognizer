@@ -22,4 +22,27 @@ def recognize(models: dict, test_set: SinglesData):
     guesses = []
     # TODO implement the recognizer
     # return probabilities, guesses
-    raise NotImplementedError
+
+    # Iterate over test sets
+    for i in range(0, len(test_set.get_all_Xlengths())):
+        sequence, length = test_set.get_item_Xlengths(i)
+        log_likelihoods = {}
+
+        # Score each model, and store the log likelihood
+        for word, model in models.items():
+            try:
+                score = model.score(sequence, length)
+                log_likelihoods[word] = score
+
+            except:
+                # If we can't score it, set the log likelihood to infinity
+                log_likelihoods[word] = float("-inf")
+                continue
+
+        # Store log likelihoods for each test set
+        probabilities.append(log_likelihoods)
+
+        # Append max for each test set
+        guesses.append(max(log_likelihoods, key=log_likelihoods.get))
+
+    return probabilities, guesses

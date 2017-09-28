@@ -77,7 +77,28 @@ class SelectorBIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on BIC scores
-        raise NotImplementedError
+        bic_scores = []
+        components = range(self.min_n_components, self.max_n_components + 1)
+        try:
+
+            for component in components:
+                # The model
+                model = self.base_model(component)  # Log likelihood
+                log_l = model.score(self.X, self.lengths)
+
+            # parameters
+            p = component * (component - 1) + 2 * component * model.n_features
+
+            # Bayesian information criteria: BIC = -2 * logL + p * logN
+            bic_score = -2 * log_l + p * math.log(component)
+            bic_scores.append(bic_score)
+
+        except Exception as e:
+            pass
+
+        states = components[np.argmin(bic_scores)] if bic_scores else self.n_constant
+
+        return self.base_model(states)
 
 
 class SelectorDIC(ModelSelector):
@@ -94,7 +115,33 @@ class SelectorDIC(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection based on DIC scores
-        raise NotImplementedError
+        dic_scores = []
+        list = []
+        components = range(self.min_n_components, self.max_n_components + 1)
+
+        try:
+            for component in components:
+                model = self.base_model(component)
+
+                # Score the model
+                list.append(model.score(self.X, self.lengths))
+
+            sum_log_p = sum(llist)
+
+            # Likelihood component length
+            m = len(components)
+
+            for log_p in list:
+                avg = - (sum_log_p - log_p) / (m - 1)
+                dic_score = log_p + avg
+                dic_scores.append(dic_score)
+
+        except Exception as e:
+            pass
+
+        states = components[np.argmax(dic_scores)] if dic_scores else self.n_constant
+
+        return self.base_model(states)
 
 
 class SelectorCV(ModelSelector):
@@ -106,4 +153,27 @@ class SelectorCV(ModelSelector):
         warnings.filterwarnings("ignore", category=DeprecationWarning)
 
         # TODO implement model selection using CV
-        raise NotImplementedError
+        mean_scores = []
+        kfold = KFold()
+        components = range(self.min_n_components, self.max_n_components + 1)
+
+        try:
+
+            for component in components:
+                model = self.base_model(component)
+                fold_scores = []
+
+                for _, idx in kfold.split(self.sequences):
+                    sequence, length = combine_sequences(idx, self.sequences)
+                    fold_scores.append(model.score(sequence, length))
+
+                mean_scores.append(np.mean(fold_scores))
+
+        except Exception as e:
+            pass
+
+        states = components[np.argmax(mean_scores)] if mean_scores else self.n_constant
+
+        return self.base_model(states)
+
+
